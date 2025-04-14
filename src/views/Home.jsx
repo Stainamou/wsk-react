@@ -1,39 +1,12 @@
-import {useState, useEffect} from 'react';
+import { useState } from 'react';
 import MediaRow from '../components/MediaRow.jsx';
 import SingleView from '../components/SingleView.jsx';
-
-const fetchData = async (url) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch data');
-  }
-  return response.json();
-};
+import useMedia from '../hooks/apiHooks.js';
 
 const Home = () => {
   const [selectedItem, setSelectedItem] = useState(null);
-  const [mediaArray, setMediaArray] = useState([]);
 
-  useEffect(() => {
-    const getMedia = async () => {
-      try {
-        const json = await fetchData(`${import.meta.env.VITE_MEDIA_API}/media`);
-
-        const newArray = await Promise.all(json.map(async (item) => {
-          const result = await fetchData(`${import.meta.env.VITE_AUTH_API}/users/${item.user_id}`);
-          return { ...item, username: result.username};
-        }));
-
-        setMediaArray(newArray);
-      } catch (error) {
-        console.error('Error fetching media:', error);
-      }
-    };
-    getMedia();
-  }, []);
-
-  console.log(mediaArray);
-  console.log('selectedItem', selectedItem);
+  const mediaArray = useMedia();
   return (
     <>
       <h2>My Media</h2>
@@ -50,13 +23,19 @@ const Home = () => {
         </tr>
         </thead>
         <tbody>
-        {mediaArray.map((item) => (
-          <MediaRow
-            key={item.media_id}
-            item={item}
-            setSelectedItem={setSelectedItem}
-          />
-        ))}
+        {Array.isArray(mediaArray) && mediaArray.length > 0 ? (
+          mediaArray.map((item) => (
+            <MediaRow
+              key={item.media_id}
+              item={item}
+              setSelectedItem={setSelectedItem}
+            />
+          ))
+        ) : (
+          <tr>
+            <td colSpan="7">No media available</td>
+          </tr>
+        )}
         </tbody>
       </table>
       <SingleView item={selectedItem} setSelectedItem={setSelectedItem} />
