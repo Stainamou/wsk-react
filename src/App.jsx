@@ -14,7 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename="/~stenm/web_kehitys/context/dist">
       <UserProvider>
         <Routes>
           <Route element={<Layout />}>
