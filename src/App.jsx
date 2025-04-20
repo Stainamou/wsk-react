@@ -8,7 +8,7 @@ import './App.css'
 
 function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename="/~stenm/web_kehitys/custom-hooks/dist">
       <Routes>
         <Route element={<Layout />}>
           <Route path="/profile" element={<Profile />} />
