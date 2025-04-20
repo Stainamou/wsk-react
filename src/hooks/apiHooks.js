@@ -1,35 +1,105 @@
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from 'react';
 
-const fetchData = async (url) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch data');
-  }
-  return response.json();
-};
+import {fetchData} from '../utils/fetchData';
+import {uniqBy} from 'lodash';
+
+const authApiUrl = import.meta.env.VITE_AUTH_API;
+const mediaApiUrl = import.meta.env.VITE_MEDIA_API;
 
 const useMedia = () => {
   const [mediaArray, setMediaArray] = useState([]);
 
+  const getMedia = async () => {
+    try {
+      const mediaData = await fetchData(`${mediaApiUrl}/media`);
+      const uniqueUserIds = uniqBy(mediaData, 'user_id');
+
+      const userData = await Promise.all(
+        uniqueUserIds.map((item) =>
+          fetchData(`${authApiUrl}/users/${item.user_id}`),
+        ),
+      );
+
+      const userMap = userData.reduce((map, {user_id, username}) => {
+        map[user_id] = username;
+        return map;
+      }, {});
+
+      const newData = mediaData.map((item) => ({
+        ...item,
+        username: userMap[item.user_id],
+      }));
+
+      setMediaArray(newData);
+    } catch (error) {
+      console.error('error', error);
+    }
+  };
+
   useEffect(() => {
-    const getMedia = async () => {
-      try {
-        const json = await fetchData(`${import.meta.env.VITE_MEDIA_API}/media`);
-
-        const newArray = await Promise.all(json.map(async (item) => {
-          const result = await fetchData(`${import.meta.env.VITE_AUTH_API}/users/${item.user_id}`);
-          return { ...item, username: result.username};
-        }));
-
-        setMediaArray(newArray);
-      } catch (error) {
-        console.error('Error fetching media:', error);
-      }
-    };
     getMedia();
   }, []);
 
   return mediaArray;
-}
+};
 
-export default useMedia;
+const useAuthentication = () => {
+  const postLogin = async (inputs) => {
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(inputs),
+    };
+    const loginResult = await fetchData(
+      import.meta.env.VITE_AUTH_API + '/auth/login',
+      fetchOptions,
+    );
+
+    console.log('loginResult', loginResult.token);
+
+    window.localStorage.setItem('token', loginResult.token);
+
+    return loginResult;
+  };
+
+  return {postLogin};
+};
+
+const useUser = () => {
+  const postUser = async (inputs) => {
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(inputs),
+    };
+    return await fetchData(
+      import.meta.env.VITE_AUTH_API + '/users',
+      fetchOptions,
+    );
+  };
+
+  const getUserByToken = useCallback(async (token) => {
+    const fetchOptions = {
+      headers: {
+        Authorization: 'Bearer: ' + token,
+      },
+    };
+
+    const userResult = await fetchData(
+      import.meta.env.VITE_AUTH_API + '/users/token',
+      fetchOptions,
+    );
+
+    console.log('userResult', userResult);
+
+    return userResult;
+  }, []);
+
+  return {getUserByToken, postUser};
+};
+
+export {useMedia, useAuthentication, useUser};
