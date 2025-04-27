@@ -1,17 +1,19 @@
 import PropTypes from 'prop-types';
 import {Link} from 'react-router-dom';
+import {useAuthentication} from '../hooks/apiHooks';
 
 const MediaRow = (props) => {
   const {item, setSelectedItem} = props;
+  const {isLoggedIn} = useAuthentication();
 
   const handleClick = () => {
     setSelectedItem(item);
   };
 
   return (
-    <tr>
+    <tr className="*:p-4 *:border-2 *:border-[#ccc]">
       <td>
-        <img src={item.thumbnail} alt={item.title} />
+        <img src={item.thumbnail} alt={item.title} className="h-52 object-cover"/>
       </td>
       <td>{item.title}</td>
       <td>{item.description}</td>
@@ -19,10 +21,43 @@ const MediaRow = (props) => {
       <td>{item.filesize}</td>
       <td>{item.media_type}</td>
       <td>{item.username}</td>
-      <td>
-        <Link to="/single" state={{item}}>
-          View
-        </Link>
+      <td className="p-0!">
+        <div className="flex gap-2 *:p-2">
+          <Link
+            to="/single"
+            state={{item}}
+            className="hover:bg-amber-300 hover:text-gray-900"
+            onClick={(event) => {
+              event.preventDefault();
+              setSelectedItem(item);
+            }}
+            >
+              View
+          </Link>
+
+          {isLoggedIn && (
+            <>
+            <button
+              type="button"
+              className="hover:bg-sky-400 hover:text-black"
+              onClick={() => {
+              console.log('edit button clicked');
+              }}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="hover:bg-red-500"
+              onClick={() => {
+              console.log('delete button clicked');
+              }}
+              >
+              Delete
+            </button>
+            </>
+          )}
+        </div>
       </td>
     </tr>
   );
