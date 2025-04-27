@@ -5,7 +5,7 @@ import {useLike} from '../hooks/apiHooks';
 const Likes = ({ itemId, initialLikes, userToken }) => {
   const [likes, setLikes] = useState(initialLikes);
   const [liked, setLiked] = useState(false);
-  const { getLikesByMediaId, getLikesByUser, postLike } = useLike();
+  const { getLikesByMediaId, getLikesByUser, postLike, deleteLike } = useLike();
 
   useEffect(() => {
     const fetchLikes = async () => {
@@ -16,7 +16,7 @@ const Likes = ({ itemId, initialLikes, userToken }) => {
         if (userToken) {
           const userLikes = await getLikesByUser(userToken);
           const hasLiked = userLikes.some((like) => like.media_id === itemId);
-          setLikes(hasLiked);
+          setLiked(hasLiked);
         }
       } catch (error) {
         console.error('Error fetching likes:', error);
@@ -27,7 +27,7 @@ const Likes = ({ itemId, initialLikes, userToken }) => {
   }, [itemId, userToken, getLikesByMediaId, getLikesByUser]);
 
   const handleLike = async () => {
-    if (!liked && userToken) {
+    if (userToken) {
       try {
         if (!liked) {
           await postLike(itemId, userToken);

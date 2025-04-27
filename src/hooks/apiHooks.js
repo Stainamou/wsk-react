@@ -1,7 +1,6 @@
-import {useCallback, useEffect, useState} from 'react';
-
-import {fetchData} from '../utils/fetchData';
-import {uniqBy} from 'lodash';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchData } from '../utils/fetchData';
+import { uniqBy } from 'lodash';
 
 const authApiUrl = import.meta.env.VITE_AUTH_API;
 const mediaApiUrl = import.meta.env.VITE_MEDIA_API;
@@ -11,28 +10,41 @@ const useMedia = () => {
 
   const getMedia = async () => {
     try {
-      const mediaData = await fetchData(`${mediaApiUrl}/media`);
-      const uniqueUserIds = uniqBy(mediaData, 'user_id');
+      const response = await fetch(`${mediaApiUrl}/media`);
+      const contentType = response.headers.get('content-type');
 
-      const userData = await Promise.all(
-        uniqueUserIds.map((item) =>
-          fetchData(`${authApiUrl}/users/${item.user_id}`),
-        ),
-      );
+      if (contentType && contentType.includes('application/json')) {
+        const mediaData = await response.json();
 
-      const userMap = userData.reduce((map, {user_id, username}) => {
-        map[user_id] = username;
-        return map;
-      }, {});
+        if (!Array.isArray(mediaData) || !mediaData.every(item => 'user_id' in item)) {
+          console.error('Invalid media data: Missing user_id');
+          return;
+        }
 
-      const newData = mediaData.map((item) => ({
-        ...item,
-        username: userMap[item.user_id],
-      }));
+        const uniqueUserIds = uniqBy(mediaData, 'user_id');
 
-      setMediaArray(newData);
+        const userData = await Promise.all(
+          uniqueUserIds.map((item) =>
+            fetchData(`${authApiUrl}/users/${item.user_id}`),
+          ),
+        );
+
+        const userMap = userData.reduce((map, { user_id, username }) => {
+          map[user_id] = username;
+          return map;
+        }, {});
+
+        const newData = mediaData.map((item) => ({
+          ...item,
+          username: userMap[item.user_id],
+        }));
+
+        setMediaArray(newData);
+      } else {
+        console.error('Response is not JSON:', await response.text());
+      }
     } catch (error) {
-      console.error('error', error);
+      console.error('Error in getMedia:', error);
     }
   };
 
@@ -48,7 +60,7 @@ const useMedia = () => {
     const fetchOptions = {
       method: 'POST',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
@@ -61,7 +73,7 @@ const useMedia = () => {
     const fetchOptions = {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(inputs),
@@ -74,7 +86,7 @@ const useMedia = () => {
     const fetchOptions = {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     };
@@ -82,7 +94,7 @@ const useMedia = () => {
     return await fetchData(`${mediaApiUrl}/media/${id}`, fetchOptions);
   };
 
-  return {mediaArray, postMedia, deleteMedia, modifyMedia};
+  return { mediaArray, postMedia, deleteMedia, modifyMedia };
 };
 
 const tokenExistsInLocalstorage = () => Boolean(localStorage.getItem('token'));
@@ -99,7 +111,7 @@ const useAuthentication = () => {
       body: JSON.stringify(inputs),
     };
     const loginResult = await fetchData(
-      import.meta.env.VITE_AUTH_API + '/auth/login',
+      `${authApiUrl}/auth/login`,
       fetchOptions,
     );
 
@@ -112,7 +124,7 @@ const useAuthentication = () => {
     return loginResult;
   };
 
-  return {postLogin, isLoggedIn};
+  return { postLogin, isLoggedIn };
 };
 
 const useUser = () => {
@@ -124,26 +136,20 @@ const useUser = () => {
       },
       body: JSON.stringify(inputs),
     };
-    return await fetchData(
-      import.meta.env.VITE_AUTH_API + '/users',
-      fetchOptions,
-    );
+    return await fetchData(`${authApiUrl}/users`, fetchOptions);
   };
 
   const getUserByToken = useCallback(async (token) => {
     const fetchOptions = {
       headers: {
-        Authorization: 'Bearer: ' + token,
+        Authorization: `Bearer ${token}`,
       },
     };
 
-    return await fetchData(
-      import.meta.env.VITE_AUTH_API + '/users/token',
-      fetchOptions,
-    );
+    return await fetchData(`${authApiUrl}/users/token`, fetchOptions);
   }, []);
 
-  return {getUserByToken, postUser};
+  return { getUserByToken, postUser };
 };
 
 const useFile = () => {
@@ -154,19 +160,19 @@ const useFile = () => {
     const fetchOptions = {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer: ' + token,
+        Authorization: `Bearer ${token}`,
       },
       mode: 'cors',
       body: formData,
     };
 
     return await fetchData(
-      import.meta.env.VITE_UPLOAD_SERVER + '/upload',
+      `${import.meta.env.VITE_UPLOAD_SERVER}/upload`,
       fetchOptions,
     );
   };
 
-  return {postFile};
+  return { postFile };
 };
 
 const useLike = () => {
@@ -174,7 +180,7 @@ const useLike = () => {
     const fetchOptions = {
       method: 'POST',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ media_id: mediaId }),
@@ -187,7 +193,7 @@ const useLike = () => {
     const fetchOptions = {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     };
@@ -203,7 +209,7 @@ const useLike = () => {
     const fetchOptions = {
       method: 'GET',
       headers: {
-        Authorization: `Bearer: ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     };
@@ -212,6 +218,6 @@ const useLike = () => {
   };
 
   return { postLike, deleteLike, getLikesByMediaId, getLikesByUser };
-}
+};
 
-export {useMedia, useAuthentication, useUser, useFile, useLike};
+export { useMedia, useAuthentication, useUser, useFile, useLike };
