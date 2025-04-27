@@ -214,4 +214,4 @@ const useLike = () => {
   return { postLike, deleteLike, getLikesByMediaId, getLikesByUser };
 }
 
-export {useMedia, useAuthentication, useUser, useFile};
+export {useMedia, useAuthentication, useUser, useFile, useLike};
