@@ -40,10 +40,56 @@ const useMedia = () => {
     getMedia();
   }, []);
 
-  return mediaArray;
+  const postMedia = async (file, inputs, token) => {
+    const data = {
+      ...inputs,
+      ...file,
+    };
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    };
+
+    return await fetchData(`${mediaApiUrl}/media`, fetchOptions);
+  };
+
+  const modifyMedia = async (inputs, token) => {
+    const fetchOptions = {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(inputs),
+    };
+
+    return await fetchData(`${mediaApiUrl}/media/${inputs.id}`, fetchOptions);
+  };
+
+  const deleteMedia = async (id, token) => {
+    const fetchOptions = {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    return await fetchData(`${mediaApiUrl}/media/${id}`, fetchOptions);
+  };
+
+  return {mediaArray, postMedia, deleteMedia, modifyMedia};
 };
 
+const tokenExistsInLocalstorage = () => Boolean(localStorage.getItem('token'));
+
 const useAuthentication = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(tokenExistsInLocalstorage());
+
   const postLogin = async (inputs) => {
     const fetchOptions = {
       method: 'POST',
@@ -61,10 +107,12 @@ const useAuthentication = () => {
 
     window.localStorage.setItem('token', loginResult.token);
 
+    setIsLoggedIn(tokenExistsInLocalstorage());
+
     return loginResult;
   };
 
-  return {postLogin};
+  return {postLogin, isLoggedIn};
 };
 
 const useUser = () => {
@@ -89,17 +137,81 @@ const useUser = () => {
       },
     };
 
-    const userResult = await fetchData(
+    return await fetchData(
       import.meta.env.VITE_AUTH_API + '/users/token',
       fetchOptions,
     );
-
-    console.log('userResult', userResult);
-
-    return userResult;
   }, []);
 
   return {getUserByToken, postUser};
 };
 
-export {useMedia, useAuthentication, useUser};
+const useFile = () => {
+  const postFile = async (file, token) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer: ' + token,
+      },
+      mode: 'cors',
+      body: formData,
+    };
+
+    return await fetchData(
+      import.meta.env.VITE_UPLOAD_SERVER + '/upload',
+      fetchOptions,
+    );
+  };
+
+  return {postFile};
+};
+
+const useLike = () => {
+  const postLike = async (mediaId, token) => {
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ media_id: mediaId }),
+    };
+
+    return await fetchData(`${mediaApiUrl}/likes`, fetchOptions);
+  };
+
+  const deleteLike = async (likeId, token) => {
+    const fetchOptions = {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    return await fetchData(`${mediaApiUrl}/likes/${likeId}`, fetchOptions);
+  };
+
+  const getLikesByMediaId = async (mediaId) => {
+    return await fetchData(`${mediaApiUrl}/likes/media/${mediaId}`);
+  };
+
+  const getLikesByUser = async (token) => {
+    const fetchOptions = {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer: ${token}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    return await fetchData(`${mediaApiUrl}/likes/user`, fetchOptions);
+  };
+
+  return { postLike, deleteLike, getLikesByMediaId, getLikesByUser };
+}
+
+export {useMedia, useAuthentication, useUser, useFile};
